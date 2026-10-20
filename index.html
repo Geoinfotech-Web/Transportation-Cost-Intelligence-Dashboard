@@ -262,7 +262,7 @@
           <p class="df-addr">Oluwalogbon House, Testing Ground Bus Stop, Obafemi Awolowo Way, Alausa, Ikeja, Lagos.</p>
           <p class="df-contact">Email: <span>mail@geoinfotech.ng</span> &nbsp;|&nbsp; <span>contact@geoinfotech.ng</span></p>
           <p class="df-contact">Phone: <span>+234 816 322 2177</span> &nbsp;|&nbsp; <span>+234 901 872 4833</span></p>
-          <p class="df-attr">Data: NBS PMS Price Watch &middot; Boundaries: geoBoundaries (CC-BY-4.0) &middot; Map: CARTO/OSM &middot; Built with VS Code &middot; Built by Adeusi Adedolapo</p>
+          <p class="df-attr">Data: NBS PMS Price Watch &middot; Boundaries: geoBoundaries (CC-BY-4.0) &middot; Map: OSM/Esri/Stadia Maps &middot; Built with VS Code &middot; Built by Adeusi Adedolapo</p>
         </footer>
 
       </div>
@@ -489,6 +489,16 @@
             <h4 class="settings-group-title">Map Layers</h4>
             <div class="settings-toggle-row">
               <div class="str-info">
+                <span class="str-label">Nigerian States</span>
+                <span class="str-desc">Show state boundaries and PMS price shading</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="settings-states-chk" checked>
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="settings-toggle-row">
+              <div class="str-info">
                 <span class="str-label">Fuel Stations</span>
                 <span class="str-desc">Show fuel station markers on the map</span>
               </div>
@@ -503,11 +513,10 @@
                 <span class="str-desc">Background map style</span>
               </div>
               <select id="settings-basemap-sel" class="settings-select">
-                <option value="carto-dark">Dark (CartoDB)</option>
-                <option value="carto-light">Light (CartoDB)</option>
-                <option value="carto-voyager">Voyager (CartoDB)</option>
                 <option value="osm">OpenStreetMap</option>
                 <option value="esri-satellite">Satellite (Esri)</option>
+                <option value="esri-dark-gray">Esri Dark Gray Canvas</option>
+                <option value="stadia-dark">Stadia Alidade Smooth Dark</option>
               </select>
             </div>
             <div class="settings-toggle-row" style="margin-top:10px">

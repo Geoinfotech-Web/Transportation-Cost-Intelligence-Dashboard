@@ -111,23 +111,44 @@ let nigeriaMap;
 let stateLayer;
 let stationLayer;
 let currentTileLayer;
+let currentReferenceLayer;
 let highwayLayer = null;
 let highwaysLoaded = false;
 
 const BASEMAPS = {
-  "carto-dark":     { url: "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",    options: { maxZoom: 19, subdomains: "abcd" } },
-  "carto-light":    { url: "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",   options: { maxZoom: 19, subdomains: "abcd" } },
-  "carto-voyager":  { url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", options: { maxZoom: 19, subdomains: "abcd" } },
-  "osm":            { url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",                    options: { maxZoom: 19 } },
-  "esri-satellite": { url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", options: { maxZoom: 19 } },
+  "osm": { url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", options: {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  } },
+  "esri-satellite": { url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", options: {
+    maxZoom: 19,
+    attribution: 'Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+  } },
+  "esri-dark-gray": {
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+    referenceUrl: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",
+    options: {
+      maxZoom: 19,
+      attribution: 'Sources: Esri, HERE, Garmin, &copy; OpenStreetMap contributors, and the GIS User Community',
+    },
+  },
+  "stadia-dark": { url: "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png", options: {
+    maxZoom: 20,
+    attribution: '&copy; <a href="https://stadiamaps.com/attribution/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  } },
 };
 
 function switchBasemap(key) {
   if (!nigeriaMap || !BASEMAPS[key]) return;
   if (currentTileLayer) currentTileLayer.remove();
+  if (currentReferenceLayer) currentReferenceLayer.remove();
   const bm = BASEMAPS[key];
   currentTileLayer = L.tileLayer(bm.url, bm.options).addTo(nigeriaMap);
+  currentReferenceLayer = bm.referenceUrl
+    ? L.tileLayer(bm.referenceUrl, { maxZoom: bm.options.maxZoom }).addTo(nigeriaMap)
+    : null;
   if (stateLayer) stateLayer.bringToFront();
+  if (currentReferenceLayer) currentReferenceLayer.bringToFront();
   if (stationLayer) stationLayer.bringToFront();
   localStorage.setItem("dashBasemap", key);
 }
@@ -384,12 +405,15 @@ function renderMap(geoJson) {
     zoom: 5.55,
     minZoom: 5,
     maxZoom: 9,
-    attributionControl: false,
+    attributionControl: true,
   });
 
-  const savedBasemap = localStorage.getItem("dashBasemap") || "carto-dark";
-  const bmCfg = BASEMAPS[savedBasemap] || BASEMAPS["carto-dark"];
+  const savedBasemap = localStorage.getItem("dashBasemap") || "osm";
+  const bmCfg = BASEMAPS[savedBasemap] || BASEMAPS.osm;
   currentTileLayer = L.tileLayer(bmCfg.url, bmCfg.options).addTo(nigeriaMap);
+  currentReferenceLayer = bmCfg.referenceUrl
+    ? L.tileLayer(bmCfg.referenceUrl, { maxZoom: bmCfg.options.maxZoom }).addTo(nigeriaMap)
+    : null;
 
   stateLayer = L.geoJSON(geoJson, {
     style: (feature) => {
@@ -402,7 +426,9 @@ function renderMap(geoJson) {
       layer.bindTooltip(buildTooltip(state, rec), { className: "map-tooltip" });
       layer.on("click", () => selectState(rec?.state || state));
     },
-  }).addTo(nigeriaMap);
+  });
+  if (localStorage.getItem("dashStatesVisible") !== "false") stateLayer.addTo(nigeriaMap);
+  if (currentReferenceLayer) currentReferenceLayer.bringToFront();
 
   nigeriaMap.fitBounds(stateLayer.getBounds(), { padding: [12, 12] });
 
@@ -2136,6 +2162,22 @@ function initThemePicker() {
 
 /* ── Fuel stations map toggle (settings panel) ────────────── */
 function initSettingsPanel() {
+  const statesChk = $("settings-states-chk");
+  if (statesChk) {
+    statesChk.checked = localStorage.getItem("dashStatesVisible") !== "false";
+    statesChk.addEventListener("change", () => {
+      if (!stateLayer) return;
+      if (statesChk.checked) {
+        stateLayer.addTo(nigeriaMap);
+        if (currentReferenceLayer) currentReferenceLayer.bringToFront();
+        if (stationLayer) stationLayer.bringToFront();
+      } else {
+        stateLayer.remove();
+      }
+      localStorage.setItem("dashStatesVisible", String(statesChk.checked));
+    });
+  }
+
   const chk = $("settings-stations-chk");
   if (chk) {
     chk.addEventListener("change", () => {
@@ -2147,7 +2189,8 @@ function initSettingsPanel() {
 
   const basemapSel = $("settings-basemap-sel");
   if (basemapSel) {
-    basemapSel.value = localStorage.getItem("dashBasemap") || "carto-dark";
+    const savedBasemap = localStorage.getItem("dashBasemap");
+    basemapSel.value = BASEMAPS[savedBasemap] ? savedBasemap : "osm";
     basemapSel.addEventListener("change", () => switchBasemap(basemapSel.value));
   }
 
