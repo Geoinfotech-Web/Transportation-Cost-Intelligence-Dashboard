@@ -4,8 +4,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "predev": "node ./scripts/sync-dashboard-data.js",
-    "prebuild": "node ./scripts/sync-dashboard-data.js",
+    "predev": "node ./sync-dashboard-data.js",
+    "prebuild": "node ./sync-dashboard-data.js",
     "dev": "vite --config vite.config.js --configLoader native --host 0.0.0.0",
     "build": "tsc && vite build --config vite.config.js --configLoader native",
     "start": "vite preview --config vite.config.js --configLoader native --host 0.0.0.0",

@@ -1,5 +1,5 @@
 import { copyFileSync, existsSync, mkdirSync } from "node:fs";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 
 const root = process.cwd();
@@ -40,8 +40,9 @@ console.log(`Copied ${copied}/${files.length} Excel files from Dashboard Data to
 
 if (existsSync(shapefileDir)) {
   try {
-    const parts = ["Compress-Archive", "-Path", `${shapefileDir}\\*`, "-DestinationPath", shapefileZip, "-Force"].map((part) => `"${part.replace(/"/g, "\"")}"`).join(" ");
-    execSync(`powershell -NoProfile -Command ${parts}`, { stdio: "inherit" });
+    const quotePowerShell = (value) => `'${value.replace(/'/g, "''")}'`;
+    const command = `Compress-Archive -Path ${quotePowerShell(`${shapefileDir}\\*`)} -DestinationPath ${quotePowerShell(shapefileZip)} -Force`;
+    execFileSync("powershell", ["-NoProfile", "-Command", command], { stdio: "inherit" });
     console.log(`Created shapefile archive from ${shapefileDir} to ${shapefileZip}`);
   } catch (error) {
     console.warn(`Unable to create shapefile archive from ${shapefileDir}:`, error);

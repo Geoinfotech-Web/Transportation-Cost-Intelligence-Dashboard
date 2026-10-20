@@ -25,6 +25,10 @@ An interactive web-based dashboard displaying PMS (fuel) and transportation cost
 - Includes all months from November 2024 to March 2026
 - Ready for further analysis in Excel or other tools
 
+## Map Layers
+
+Choose **Esri Dark Gray Canvas**, **Stadia Alidade Smooth Dark**, **OpenStreetMap**, or **Esri Satellite** from **Settings → Map Layers → Basemap**. Use the **Nigerian States** toggle to hide state boundaries and price shading while keeping fuel-station markers visible. Stadia tiles work without an API key on `localhost`; for a public deployment, configure domain-based authentication for the site in the Stadia Maps client dashboard.
+
 ## Setup Instructions
 
 ### Option 1: Using Your Real Data (Recommended)

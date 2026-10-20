@@ -111,24 +111,33 @@ let nigeriaMap;
 let stateLayer;
 let stationLayer;
 let currentTileLayer;
+let currentTileReferenceLayer;
 let highwayLayer = null;
 let highwaysLoaded = false;
 
 const BASEMAPS = {
-  "carto-dark":     { url: "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",    options: { maxZoom: 19, subdomains: "abcd" } },
-  "carto-light":    { url: "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",   options: { maxZoom: 19, subdomains: "abcd" } },
-  "carto-voyager":  { url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", options: { maxZoom: 19, subdomains: "abcd" } },
-  "osm":            { url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",                    options: { maxZoom: 19 } },
-  "esri-satellite": { url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", options: { maxZoom: 19 } },
+  "stadia-alidade-dark": { url: "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png", options: { maxZoom: 20, attribution: '&copy; <a href="https://stadiamaps.com/attribution/" target="_blank" rel="noopener">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>' } },
+  "osm":            { url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",                    options: { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors' } },
+  "esri-gray":      { url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", referenceUrl: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}", options: { maxZoom: 16, attribution: 'Tiles &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a>, HERE, Garmin, &copy; OpenStreetMap contributors, and the GIS user community' } },
+  "esri-satellite": { url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", options: { maxZoom: 19, attribution: 'Tiles &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a>' } },
 };
+const DEFAULT_BASEMAP = "esri-gray";
+
+function savedBasemap() {
+  const key = localStorage.getItem("dashBasemap");
+  return BASEMAPS[key] ? key : DEFAULT_BASEMAP;
+}
 
 function switchBasemap(key) {
   if (!nigeriaMap || !BASEMAPS[key]) return;
   if (currentTileLayer) currentTileLayer.remove();
+  if (currentTileReferenceLayer) currentTileReferenceLayer.remove();
   const bm = BASEMAPS[key];
   currentTileLayer = L.tileLayer(bm.url, bm.options).addTo(nigeriaMap);
+  currentTileReferenceLayer = bm.referenceUrl
+    ? L.tileLayer(bm.referenceUrl, { maxZoom: bm.options.maxZoom }).addTo(nigeriaMap)
+    : null;
   if (stateLayer) stateLayer.bringToFront();
-  if (stationLayer) stationLayer.bringToFront();
   localStorage.setItem("dashBasemap", key);
 }
 
@@ -360,9 +369,9 @@ function renderHikeList() {
 
 /* ── Map ──────────────────────────────────────────────────── */
 async function loadNigeriaBoundaries() {
-  const res = await fetch("./public/data/nigeria_states.geojson");
+  const res = await fetch(new URL("./data/nigeria_states.geojson", document.baseURI));
   if (res.ok) return res.json();
-  const r2  = await fetch("./public/data/gadm41_NGA_shp.zip");
+  const r2  = await fetch(new URL("./data/gadm41_NGA_shp.zip", document.baseURI));
   if (!r2.ok || typeof shp !== "function") throw new Error("Unable to load Nigeria boundaries");
   const geo    = await shp(await r2.arrayBuffer());
   const layers = Array.isArray(geo) ? geo : [geo];
@@ -384,12 +393,14 @@ function renderMap(geoJson) {
     zoom: 5.55,
     minZoom: 5,
     maxZoom: 9,
-    attributionControl: false,
+    attributionControl: true,
   });
 
-  const savedBasemap = localStorage.getItem("dashBasemap") || "carto-dark";
-  const bmCfg = BASEMAPS[savedBasemap] || BASEMAPS["carto-dark"];
+  const bmCfg = BASEMAPS[savedBasemap()];
   currentTileLayer = L.tileLayer(bmCfg.url, bmCfg.options).addTo(nigeriaMap);
+  currentTileReferenceLayer = bmCfg.referenceUrl
+    ? L.tileLayer(bmCfg.referenceUrl, { maxZoom: bmCfg.options.maxZoom }).addTo(nigeriaMap)
+    : null;
 
   stateLayer = L.geoJSON(geoJson, {
     style: (feature) => {
@@ -402,7 +413,8 @@ function renderMap(geoJson) {
       layer.bindTooltip(buildTooltip(state, rec), { className: "map-tooltip" });
       layer.on("click", () => selectState(rec?.state || state));
     },
-  }).addTo(nigeriaMap);
+  });
+  if (localStorage.getItem("dashStatesVisible") !== "false") stateLayer.addTo(nigeriaMap);
 
   nigeriaMap.fitBounds(stateLayer.getBounds(), { padding: [12, 12] });
 
@@ -563,7 +575,6 @@ function buildHighwayLayer(features) {
 
   /* Roads sit above state fill polygons; stations stay on top of roads */
   highwayLayer.bringToFront();
-  if (stationLayer) stationLayer.bringToFront();
 }
 
 async function loadNigeriaHighways() {
@@ -579,7 +590,7 @@ async function loadNigeriaHighways() {
 
   /* ── 1. Local GeoJSON file (instant — bundled with app) ── */
   try {
-    const resp = await fetch("./public/data/nigeria_highways.geojson");
+    const resp = await fetch(new URL("./nigeria_highways.geojson", import.meta.url));
     if (resp.ok) {
       const gj = await resp.json();
       const features = Array.isArray(gj.features) ? gj.features : [];
@@ -670,7 +681,6 @@ function toggleHighways(show) {
   if (show) {
     highwayLayer.addTo(nigeriaMap);
     highwayLayer.bringToFront();
-    if (stationLayer) stationLayer.bringToFront();
   } else {
     highwayLayer.remove();
     const hint  = $("hw-attr-hint");
@@ -825,11 +835,15 @@ function renderStationsTable() {
     const total = filtered.length;
     let html = `Showing ${shown.toLocaleString()} of ${total.toLocaleString()} station${total !== 1 ? "s" : ""}`;
     if (!stationsShowAll && total > PAGE) {
-      html += ` <button class="show-all-btn" onclick="stationsShowAll=true;renderStationsTable()">Show all ${total.toLocaleString()}</button>`;
+      html += ` <button class="show-all-btn" type="button">Show all ${total.toLocaleString()}</button>`;
     } else if (stationsShowAll && total > PAGE) {
-      html += ` <button class="show-all-btn" onclick="stationsShowAll=false;renderStationsTable()">Show less</button>`;
+      html += ` <button class="show-all-btn" type="button">Show less</button>`;
     }
     footer.innerHTML = html;
+    footer.querySelector(".show-all-btn")?.addEventListener("click", () => {
+      stationsShowAll = !stationsShowAll;
+      renderStationsTable();
+    });
   }
 }
 
@@ -1538,12 +1552,12 @@ function openPrintWindow(htmlContent) {
 }
 
 function _pdfLogoSrc() {
-  return _pdfLogoBase64 || "./public/geoinfotech-logo.gif";
+  return _pdfLogoBase64 || "./geoinfotech-logo.gif";
 }
 
 async function loadPdfLogo() {
   try {
-    const resp = await fetch("./public/geoinfotech-logo.gif");
+    const resp = await fetch(new URL("./geoinfotech-logo.gif", document.baseURI));
     if (!resp.ok) return;
     const blob = await resp.blob();
     _pdfLogoBase64 = await new Promise((res) => {
@@ -2136,6 +2150,20 @@ function initThemePicker() {
 
 /* ── Fuel stations map toggle (settings panel) ────────────── */
 function initSettingsPanel() {
+  const statesChk = $("settings-states-chk");
+  if (statesChk) {
+    statesChk.checked = localStorage.getItem("dashStatesVisible") !== "false";
+    statesChk.addEventListener("change", () => {
+      if (!stateLayer || !nigeriaMap) return;
+      if (statesChk.checked) {
+        stateLayer.addTo(nigeriaMap);
+      } else {
+        stateLayer.remove();
+      }
+      localStorage.setItem("dashStatesVisible", String(statesChk.checked));
+    });
+  }
+
   const chk = $("settings-stations-chk");
   if (chk) {
     chk.addEventListener("change", () => {
@@ -2147,7 +2175,7 @@ function initSettingsPanel() {
 
   const basemapSel = $("settings-basemap-sel");
   if (basemapSel) {
-    basemapSel.value = localStorage.getItem("dashBasemap") || "carto-dark";
+    basemapSel.value = savedBasemap();
     basemapSel.addEventListener("change", () => switchBasemap(basemapSel.value));
   }
 
@@ -2394,7 +2422,7 @@ function stripLogoBackground() {
 /* ── Init ─────────────────────────────────────────────────── */
 async function initDashboard() {
   try {
-    const res = await fetch("./data.json");
+    const res = await fetch(new URL("./data.json", import.meta.url));
     if (!res.ok) throw new Error("Unable to load data.json");
     allData = await res.json();
   } catch (err) {
@@ -2404,7 +2432,7 @@ async function initDashboard() {
   }
 
   try {
-    const sr = await fetch("./public/data/nigeria_fuel_stations.json");
+    const sr = await fetch(new URL("./data/nigeria_fuel_stations.json", document.baseURI));
     if (sr.ok) {
       const d = await sr.json();
       fuelStations = d.stations || [];
