@@ -16,7 +16,7 @@
   <!-- ── Sidebar ─────────────────────────────────────────── -->
   <aside class="sidebar" id="main-sidebar">
     <div class="brand">
-      <img src="./geoinfotech-logo.gif" class="brand-logo" alt="GeoInfotech logo" />
+      <img src="./public/geoinfotech-logo.gif" class="brand-logo" alt="GeoInfotech logo" />
       <div class="brand-search-wrap">
         <svg viewBox="0 0 20 20" fill="none" class="search-icon"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.6"/><path d="M12 12l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         <input id="state-search" type="search" placeholder="Search state…" />
@@ -256,7 +256,7 @@
         <!-- ── Dashboard footer ────────────────────────── -->
         <footer class="dashboard-footer">
           <div class="df-logo-wrap">
-            <img src="./geoinfotech-logo.gif" class="df-logo" alt="GeoInfotech logo" />
+            <img src="./public/geoinfotech-logo.gif" class="df-logo" alt="GeoInfotech logo" />
           </div>
           <strong class="df-name">Geoinfotech</strong>
           <p class="df-addr">Oluwalogbon House, Testing Ground Bus Stop, Obafemi Awolowo Way, Alausa, Ikeja, Lagos.</p>
@@ -489,16 +489,6 @@
             <h4 class="settings-group-title">Map Layers</h4>
             <div class="settings-toggle-row">
               <div class="str-info">
-                <span class="str-label">Nigerian States</span>
-                <span class="str-desc">Show state boundaries and price shading</span>
-              </div>
-              <label class="toggle-switch">
-                <input type="checkbox" id="settings-states-chk" checked>
-                <span class="toggle-track"><span class="toggle-thumb"></span></span>
-              </label>
-            </div>
-            <div class="settings-toggle-row">
-              <div class="str-info">
                 <span class="str-label">Fuel Stations</span>
                 <span class="str-desc">Show fuel station markers on the map</span>
               </div>
@@ -513,8 +503,9 @@
                 <span class="str-desc">Background map style</span>
               </div>
               <select id="settings-basemap-sel" class="settings-select">
-                <option value="esri-gray">Dark Gray Canvas (Esri)</option>
-                <option value="stadia-alidade-dark">Alidade Smooth Dark (Stadia)</option>
+                <option value="carto-dark">Dark (CartoDB)</option>
+                <option value="carto-light">Light (CartoDB)</option>
+                <option value="carto-voyager">Voyager (CartoDB)</option>
                 <option value="osm">OpenStreetMap</option>
                 <option value="esri-satellite">Satellite (Esri)</option>
               </select>
@@ -570,7 +561,7 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script type="module" src="./data-loader.js"></script>
+<script src="./data-loader.js"></script>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" async onload="window.renderDashboardCharts && window.renderDashboardCharts()"></script>
 </body>
 </html>
