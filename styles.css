@@ -2095,7 +2095,6 @@ svg { display: block; }
 }
 .settings-select:focus { border-color: var(--blue); }
 [data-theme="light"] .settings-select { background: #fff; color: #1a1a2e; }
-
 /* About box */
 .about-box {
   padding: 14px;

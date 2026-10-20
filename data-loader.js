@@ -112,6 +112,7 @@ let stateLayer;
 let stationLayer;
 let currentTileLayer;
 let currentReferenceLayer;
+let activeBasemapKey = "osm";
 let highwayLayer = null;
 let highwaysLoaded = false;
 
@@ -132,14 +133,10 @@ const BASEMAPS = {
       attribution: 'Sources: Esri, HERE, Garmin, &copy; OpenStreetMap contributors, and the GIS User Community',
     },
   },
-  "stadia-dark": { url: "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png", options: {
-    maxZoom: 20,
-    attribution: '&copy; <a href="https://stadiamaps.com/attribution/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-  } },
 };
 
 function switchBasemap(key) {
-  if (!nigeriaMap || !BASEMAPS[key]) return;
+  if (!nigeriaMap || !BASEMAPS[key]) return false;
   if (currentTileLayer) currentTileLayer.remove();
   if (currentReferenceLayer) currentReferenceLayer.remove();
   const bm = BASEMAPS[key];
@@ -150,10 +147,15 @@ function switchBasemap(key) {
   if (stateLayer) stateLayer.bringToFront();
   if (currentReferenceLayer) currentReferenceLayer.bringToFront();
   if (stationLayer) stationLayer.bringToFront();
+  activeBasemapKey = key;
   localStorage.setItem("dashBasemap", key);
+  return true;
 }
 
 const $  = (id) => document.getElementById(id);
+function getBasemapConfig(key) {
+  return BASEMAPS[key] || null;
+}
 const currency = (v, d = 2) => `₦${Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d })}`;
 
 /* ── Right panel multi-view ───────────────────────────────── */
@@ -408,8 +410,11 @@ function renderMap(geoJson) {
     attributionControl: true,
   });
 
-  const savedBasemap = localStorage.getItem("dashBasemap") || "osm";
-  const bmCfg = BASEMAPS[savedBasemap] || BASEMAPS.osm;
+  const storedBasemap = localStorage.getItem("dashBasemap") || "osm";
+  const savedBasemap = getBasemapConfig(storedBasemap) ? storedBasemap : "osm";
+  const bmCfg = getBasemapConfig(savedBasemap) || BASEMAPS.osm;
+  activeBasemapKey = savedBasemap;
+  if (storedBasemap !== savedBasemap) localStorage.setItem("dashBasemap", savedBasemap);
   currentTileLayer = L.tileLayer(bmCfg.url, bmCfg.options).addTo(nigeriaMap);
   currentReferenceLayer = bmCfg.referenceUrl
     ? L.tileLayer(bmCfg.referenceUrl, { maxZoom: bmCfg.options.maxZoom }).addTo(nigeriaMap)
@@ -605,7 +610,7 @@ async function loadNigeriaHighways() {
 
   /* ── 1. Local GeoJSON file (instant — bundled with app) ── */
   try {
-    const resp = await fetch("./public/data/nigeria_highways.geojson");
+    const resp = await fetch("./nigeria_highways.geojson");
     if (resp.ok) {
       const gj = await resp.json();
       const features = Array.isArray(gj.features) ? gj.features : [];
@@ -2162,6 +2167,7 @@ function initThemePicker() {
 
 /* ── Fuel stations map toggle (settings panel) ────────────── */
 function initSettingsPanel() {
+  localStorage.removeItem("dashStadiaApiKey");
   const statesChk = $("settings-states-chk");
   if (statesChk) {
     statesChk.checked = localStorage.getItem("dashStatesVisible") !== "false";
@@ -2189,8 +2195,7 @@ function initSettingsPanel() {
 
   const basemapSel = $("settings-basemap-sel");
   if (basemapSel) {
-    const savedBasemap = localStorage.getItem("dashBasemap");
-    basemapSel.value = BASEMAPS[savedBasemap] ? savedBasemap : "osm";
+    basemapSel.value = activeBasemapKey;
     basemapSel.addEventListener("change", () => switchBasemap(basemapSel.value));
   }
 
